@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NOCTIS | SECURE NODE</title>
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <style>
+        body { background: #000; color: #00ff41; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        #gate { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; text-align: center; }
+        .container { flex: 1; display: flex; flex-direction: column; padding: 20px; max-width: 900px; margin: auto; width: 100%; }
+        #chat { flex: 1; border: 1px solid #00ff41; overflow-y: auto; padding: 15px; margin-bottom: 10px; background: rgba(0,255,65,0.02); box-shadow: inset 0 0 10px #00ff4122; }
+        input, button { background: #000; border: 1px solid #00ff41; color: #00ff41; padding: 12px; margin: 5px 0; outline: none; }
+        button { cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #00ff41; color: #000; }
+        .msg { margin-bottom: 10px; border-left: 2px solid #00ff41; padding-left: 10px; animation: blink 0.1s; }
+        .user { color: #008f11; font-weight: bold; }
+        .hidden { display: none !important; }
+        @keyframes blink { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div id="gate">
+        <h1 style="letter-spacing: 10px;">NOCTIS</h1>
+        <p style="color: #666;">ENCRYPTED TERMINAL ACCESS</p>
+        <input type="password" id="master-code" placeholder="SECURITY CLEARANCE">
+        <input type="text" id="room-id" placeholder="MISSION CHANNEL ID">
+        <input type="text" id="alias" placeholder="CODENAME">
+        <button onclick="bootSystem()">AUTHORIZE</button>
+    </div>
+
+    <div id="main" class="container hidden">
+        <div style="display:flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px;">
+            <span>STATUS: <span style="color:#00ff41">ONLINE</span></span>
+            <span>CHANNEL: <span id="room-display" style="color:#fff"></span></span>
+            <button onclick="location.reload()" style="padding: 2px 5px; font-size: 10px;">LOGOUT</button>
+        </div>
+        <div id="chat"></div>
+        <div style="display:flex; gap: 10px;">
+            <input type="text" id="message" placeholder="Type message..." style="flex:1" onkeypress="if(event.key==='Enter')send()">
+            <button onclick="send()">TRANSMIT</button>
+        </div>
+    </div>
+
+    <script>
+        const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+        let currentRoom;
+        let myAlias;
+
+        function bootSystem() {
+            const master = document.getElementById('master-code').value;
+            const room = document.getElementById('room-id').value;
+            myAlias = document.getElementById('alias').value || "ANON";
+
+            if (master !== "ALPHA-99") { 
+                alert("ACCESS DENIED: INVALID CLEARANCE CODE");
+                return;
+            }
+
+            if (!room) { alert("CHANNEL ID REQUIRED"); return; }
+
+            document.getElementById('gate').classList.add('hidden');
+            document.getElementById('main').classList.remove('hidden');
+            document.getElementById('room-display').innerText = room.toUpperCase();
+
+            currentRoom = gun.get('noctis-v1-' + room);
+
+            currentRoom.map().on((data) => {
+                if (data && data.msg) {
+                    displayMessage(data);
+                }
+            });
+        }
+
+        function send() {
+            const input = document.getElementById('message');
+            if (!input.value) return;
+            currentRoom.set({ alias: myAlias, msg: input.value, time: Date.now() });
+            input.value = "";
+        }
+
+        function displayMessage(data) {
+            const chat = document.getElementById('chat');
+            const div = document.createElement('div');
+            div.className = 'msg';
+            div.innerHTML = `<span class="user">${data.alias}:</span> ${data.msg}`;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+    </script>
+</body>
+</html>
